@@ -1,0 +1,7 @@
+# Environment configuration
+config.env
+
+# Output and intermediate files
+output/
+intermediates/
+submission/all_submissions/*

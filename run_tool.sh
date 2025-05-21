@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SUBMISSIONS_DIR="submission/all_submissions"
+source config.env
 
 for folder in "$SUBMISSIONS_DIR"/*; do
     if [ -d "$folder" ]; then

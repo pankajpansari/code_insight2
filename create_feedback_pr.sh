@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# Set the base directory for submissions
-SUBMISSIONS_DIR="submission/all_submissions"
+source .env
 
 # Check if the submissions directory exists
 if [ ! -d "$SUBMISSIONS_DIR" ]; then

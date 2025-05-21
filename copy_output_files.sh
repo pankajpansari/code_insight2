@@ -1,8 +1,6 @@
 #!/bin/bash
 
-# Set the source and destination base directories
-OUTPUT_DIR="output"
-SUBMISSIONS_DIR="submission/all_submissions"
+source .env
 
 # Check if the source directory exists
 if [ ! -d "$OUTPUT_DIR" ]; then

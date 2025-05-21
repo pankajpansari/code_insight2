@@ -5,21 +5,26 @@ from pydantic import BaseModel, Field
 from pathlib import Path
 import json
 import textwrap
+from dotenv import load_dotenv
+import os
 
-# ===================== CONFIG =================================
+# ===================== LOAD CONFIG ================================
+
+# Load config.env file
+load_dotenv(dotenv_path="config.env")
 
 # File paths 
-PROBLEM_STATEMENT = "submission/problem_statement.txt"
-RUBRIC = "submission/rubric.txt"
-RUBRIC_SUMMARY = "submission/rubric_summary.txt"
-C_PROGRAM_FILE = ""
-OUTPUT_DIR = "output/"
-INTER_DIR = "intermediates/"
+PROBLEM_STATEMENT = os.getenv('PROBLEM_STATEMENT')
+RUBRIC = os.getenv('RUBRIC')
+C_PROGRAM_FILE = "" 
+OUTPUT_DIR = os.getenv('OUTPUT_DIR') 
+INTER_DIR = os.getenv('INTER_DIR')
+SUBMISSIONS_DIR = os.getenv('SUBMISSIONS_DIR')
 
 # LLM Models
-PROPOSER_REVIEWER = 'o4-mini-2025-04-16'
-SUMMARIZER = 'gpt-4.1-2025-04-14'
-client = OpenAI()
+PROPOSER_REVIEWER = os.getenv('PROPOSER_REVIEWER')
+SUMMARIZER = os.getenv('SUMMARIZER')
+
 
 # ===================== UTILS ====================================
 
@@ -42,6 +47,7 @@ def preprocess_input():
 # This function calls the clang-tidy linter on the C program file and makes LLM call
 # to summarize the linter output in a more readable format.
 def run_linter(C_PROGRAM_FILE):
+
   process = subprocess.Popen(['clang-tidy', C_PROGRAM_FILE, '--', '-Wall','-std=c11'], stdout = subprocess.PIPE, stderr = subprocess.PIPE, text = True)
   # TODO: Handle linter error by inspecting return code
   linter_output, _ = process.communicate()
@@ -93,7 +99,10 @@ class FeedbackResponse(BaseModel):
   annotations: list[Annotation] = Field(description="List of line-specific code feedback")
   summary: Summary = Field(description="Overall assessment of the submission")
   
- 
+# ======================================================================
+
+client = OpenAI()
+
 # Proposer generates a first draft of annotations 
 def call_proposer(problem_statement, rubric, submission_program):
 
