@@ -74,12 +74,14 @@ def run_linter(C_PROGRAM_FILE):
   except Exception as e:
     return f"Unexpected error: {str(e)}"
 
-# Returns output filename - in OUTPUT_DIR with '_annotated' added to the stem 
+# Returns output filename - in OUTPUT_DIR with format <username>_feedback_<c_filename>
 def get_output_filename(C_PROGRAM_FILE):
-  # TODO: Better to use Pathlib module
-  x = C_PROGRAM_FILE.split('/')
-  username = x[2][6:]
-  output_filename = '/'.join([OUTPUT_DIR, (username + '_feedback_' + x[-1])])
+
+  c_program_path = Path(C_PROGRAM_FILE)
+  username_part = c_program_path.parent.parent.name
+  username = username_part.split('-', 1)[1]
+  output_dir_path = Path(OUTPUT_DIR)
+  output_filename = output_dir_path / f"{username}_feedback_{c_program_path.name}"
   return output_filename
 
 # Write number of input/cached/output tokens per API call
@@ -299,10 +301,10 @@ def main():
     print(f"Error: {RUBRIC} not found")
   
   try:
-    with open(RUBRIC_SUMMARY, 'r') as f:
+    with open(RUBRIC, 'r') as f:
       rubric_summary = f.read()
   except FileNotFoundError:
-    print(f"Error: {RUBRIC_SUMMARY} not found")
+    print(f"Error: {RUBRIC} not found")
 
   submission_program = preprocess_input() 
   call_proposer(problem_statement, rubric, submission_program)
