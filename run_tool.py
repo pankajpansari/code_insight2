@@ -48,18 +48,31 @@ def preprocess_input():
 # to summarize the linter output in a more readable format.
 def run_linter(C_PROGRAM_FILE):
 
-  process = subprocess.Popen(['clang-tidy', C_PROGRAM_FILE, '--', '-Wall','-std=c11'], stdout = subprocess.PIPE, stderr = subprocess.PIPE, text = True)
-  # TODO: Handle linter error by inspecting return code
-  linter_output, _ = process.communicate()
-  response = client.responses.create(
-      model="gpt-4.1-nano",
-      input = [
-          {"role": "user", "content": "The following is output from a linter. Please retain the essential points only. These will be used to guide an LLM-based automated programming feedback tool"},
-          {"role": "user",
-           "content": linter_output} 
-      ]
-  )
-  return response.output_text
+  try:
+    process = subprocess.Popen(['clang-tidy', C_PROGRAM_FILE, '--', '-Wall','-std=c11'], stdout = subprocess.PIPE, stderr = subprocess.PIPE, text = True)
+    linter_output, error_output = process.communicate()
+    if error_output.returncode != 0:
+      return f"clang-tidy exited with code {error_output.returncode}: {error_output}"
+
+    try:
+      response = client.responses.create(
+          model="gpt-4.1-nano",
+          input = [
+              {"role": "user", "content": "The following is output from a linter. Please retain the essential points only. These will be used to guide an LLM-based automated programming feedback tool"},
+              {"role": "user",
+               "content": linter_output} 
+          ]
+      )
+      return response.output_text
+    except Exception as api_error:
+      return f"API call error for linter output: {str(api_error)}"
+
+  except FileNotFoundError:
+    return "Error: clang-tidy not found. Please ensure it is installed and in path"
+  except subprocess.SubprocessError as e:
+    return f"Subprocess error: {str(e)}"
+  except Exception as e:
+    return f"Unexpected error: {str(e)}"
 
 # Returns output filename - in OUTPUT_DIR with '_annotated' added to the stem 
 def get_output_filename(C_PROGRAM_FILE):
@@ -122,19 +135,21 @@ def call_proposer(problem_statement, rubric, submission_program):
   Suggest a list of annotations (comments) of feedback based on the rubric. Also give a summary. Adhere to the structured output schema.
   """
 
-  # TODO: Error handling
-  proposer_response = client.responses.parse(
-    model = PROPOSER_REVIEWER,
-    input=[
-      {"role": "system", "content": "Your role is to act as an OS course TA who provides qualitative feedback on student C programming assignment. Feedback is good when it is relevant for education of undergraduate computer science students, and it is not overwhelming in quantity. Please stick to the rubric."},
-      {
-        "role": "user",
-        "content": prompt,
-      },
-    ],
-    text_format=FeedbackResponse, 
-  )
-  
+  try:
+    proposer_response = client.responses.parse(
+      model = PROPOSER_REVIEWER,
+      input=[
+        {"role": "system", "content": "Your role is to act as an OS course TA who provides qualitative feedback on student C programming assignment. Feedback is good when it is relevant for education of undergraduate computer science students, and it is not overwhelming in quantity. Please stick to the rubric."},
+        {
+          "role": "user",
+          "content": prompt,
+        },
+      ],
+      text_format=FeedbackResponse, 
+    )
+  except Exception as api_error:
+    return f"API call error for proposer: {str(api_error)}"
+
   intial_feedback = proposer_response.output_parsed
   
   x = C_PROGRAM_FILE.split('/')
@@ -190,19 +205,21 @@ def call_reviewer(problem_statement, rubric_summary, submission_program):
   {proposal_json}
   </feedback>
   """
-  # TODO: Error handling
-  reviewer_response = client.responses.parse(
-    model = PROPOSER_REVIEWER,
-    input=[
-      {"role": "system", "content": "Your role is to act as an OS course TA who provides qualitative feedback on student C programming assignment. Feedback is good when it is relevant for education of undergraduate computer science students, and it is not overwhelming in quantity. Please stick to the rubric."},
-      {
-        "role": "user",
-        "content": prompt,
-      },
-    ],
-    text_format=FeedbackResponse, 
-  )
-  
+  try:
+    reviewer_response = client.responses.parse(
+      model = PROPOSER_REVIEWER,
+      input=[
+        {"role": "system", "content": "Your role is to act as an OS course TA who provides qualitative feedback on student C programming assignment. Feedback is good when it is relevant for education of undergraduate computer science students, and it is not overwhelming in quantity. Please stick to the rubric."},
+        {
+          "role": "user",
+          "content": prompt,
+        },
+      ],
+      text_format=FeedbackResponse, 
+    )
+  except Exception as api_error:
+    return f"API call error for proposer: {str(api_error)}"
+
   refined_feedback = reviewer_response.output_parsed
   
   x = C_PROGRAM_FILE.split('/')
@@ -225,13 +242,15 @@ def postprocess():
   x = json.load(f)
   summary = json.dumps(x['summary'])
   
-  # TODO: Error handling
-  response = client.responses.create(
-    model = SUMMARIZER,
-    input = [
-        {"role": "user", "content": "The following is summary of feedback on a C program from an automated tool. First, summarize it nicely so I can append it at the bottom of submission. Then format it properly as a C comment block; try to respect 80 character line limit convention. Do not add any suggestions of your own; give the comment block output so I can insert it as it is.\n<summary>\n" + summary + "\n</summary>"}
-    ]
-  )
+  try:
+    response = client.responses.create(
+      model = SUMMARIZER,
+      input = [
+          {"role": "user", "content": "The following is summary of feedback on a C program from an automated tool. First, summarize it nicely so I can append it at the bottom of submission. Then format it properly as a C comment block; try to respect 80 character line limit convention. Do not add any suggestions of your own; give the comment block output so I can insert it as it is.\n<summary>\n" + summary + "\n</summary>"}
+      ]
+    )
+  except Exception as api_error:
+    return f"API call error for proposer: {str(api_error)}"
 
   write_log(response, "Summarizer")
   
