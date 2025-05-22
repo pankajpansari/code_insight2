@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source .env
+source config.env
 
 # Check if the source directory exists
 if [ ! -d "$OUTPUT_DIR" ]; then

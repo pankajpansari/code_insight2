@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source .env
+source config.env
 
 # Check if the submissions directory exists
 if [ ! -d "$SUBMISSIONS_DIR" ]; then
